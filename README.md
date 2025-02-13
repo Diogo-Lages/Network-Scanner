@@ -27,7 +27,7 @@ Python-based network scanning tool. It scans TCP/UDP ports, detects service vers
    ```
 2. Run the script:
    ```bash
-   python Network-Scanner.py
+   python network_scanner.py
    ```
 3. Enter the target IP address and port range (e.g., `1-100` or `Top Ports`).
 4. Review the real-time command-line output and the generated HTML report.
