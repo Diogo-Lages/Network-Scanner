@@ -1,4 +1,8 @@
-# Network-Scanner.py
+# Network Scanner
+
+## Description
+
+Python-based network scanning tool. It scans TCP/UDP ports, detects service versions, performs OS fingerprinting, and identifies vulnerabilities. Additional features include traceroute, geolocation, WHOIS lookup, SSL/TLS checks, and automated HTML report generation.
 
 ---
 
