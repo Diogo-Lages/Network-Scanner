@@ -62,7 +62,7 @@ GEOIP_DB_PATH = "GeoLite2-City.mmdb"
 geoip_reader = geoip2.database.Reader(GEOIP_DB_PATH) if os.path.exists(GEOIP_DB_PATH) else None
 
 # Shodan API Key
-SHODAN_API_KEY = "h5v5rWOs6BsCArL5lSIJyDQ5Yknw6fs6"
+SHODAN_API_KEY = ""
 
 # Banner
 def display_banner():
