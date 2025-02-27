@@ -22,8 +22,8 @@ Python-based network scanning tool. It scans TCP/UDP ports, detects service vers
 ## **How to Use**
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Diogo-Lages/Network-Scanner.py.git
-   cd Network_Scanner.py
+   git clone https://github.com/Diogo-Lages/Network-Scanner.git
+   cd Network-Scanner
    ```
 2. Run the script:
    ```bash
