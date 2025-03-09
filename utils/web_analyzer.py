@@ -31,9 +31,7 @@ class WebAnalyzer:
         ]
 
     async def analyze_website(self, url: str) -> Dict:
-        """Comprehensive website analysis"""
         try:
-            # Ensure URL has protocol
             if not url.startswith(('http://', 'https://')):
                 url = f'https://{url}'
 
@@ -58,12 +56,9 @@ class WebAnalyzer:
             return {}
 
     async def detect_technologies(self, url: str, html_content: str) -> Dict:
-        """Detect technologies used by the website"""
         try:
-            # Use builtwith for technology detection
             builtwith_results = builtwith.parse(url)
 
-            # Organize results by category
             technologies = {
                 "frameworks": [],
                 "cms": [],
@@ -72,7 +67,6 @@ class WebAnalyzer:
                 "javascript_libraries": []
             }
 
-            # Process builtwith results
             for category, items in builtwith_results.items():
                 if "framework" in category.lower():
                     technologies["frameworks"].extend(items)
@@ -85,7 +79,6 @@ class WebAnalyzer:
                 elif "javascript" in category.lower():
                     technologies["javascript_libraries"].extend(items)
 
-            # Deduplicate lists
             for category in technologies:
                 technologies[category] = list(set(technologies[category]))
 
@@ -105,7 +98,6 @@ class WebAnalyzer:
                     detected_wafs.append(waf_name)
                     break
 
-        # Check for generic security headers that might indicate WAF presence
         security_headers = [
             "x-security",
             "x-firewall",
@@ -124,7 +116,6 @@ class WebAnalyzer:
         }
 
     def analyze_security_headers(self, headers: Dict) -> Dict:
-        """Analyze security headers and their configurations"""
         results = {
             "present": [],
             "missing": [],
@@ -139,7 +130,6 @@ class WebAnalyzer:
                     "status": "OK"
                 }
 
-                # Additional analysis for specific headers
                 if header == "Content-Security-Policy":
                     results["analysis"][header]["recommendation"] = "Review CSP directives for unnecessary permissions"
                 elif header == "X-Frame-Options" and headers[header].upper() not in ["DENY", "SAMEORIGIN"]:
@@ -151,10 +141,8 @@ class WebAnalyzer:
         return results
 
     async def check_common_vulnerabilities(self, url: str) -> List[Dict]:
-        """Check for common vulnerability patterns"""
         vulnerabilities = []
 
-        # Common vulnerability checks
         checks = [
             self._check_cors_misconfig(url),
             self._check_information_disclosure(url),
@@ -171,7 +159,6 @@ class WebAnalyzer:
         return vulnerabilities
 
     async def _check_cors_misconfig(self, url: str) -> Dict:
-        """Check for CORS misconfiguration"""
         try:
             headers = {
                 "Origin": "https://evil.com"
@@ -242,7 +229,6 @@ class WebAnalyzer:
         return {"vulnerable": False}
 
     async def _check_ssl_tls(self, url: str) -> Dict:
-        """Check SSL/TLS configuration"""
         try:
             hostname = url.split("://")[-1].split("/")[0]
             context = ssl.create_default_context()
@@ -251,7 +237,6 @@ class WebAnalyzer:
                 sock.connect((hostname, 443))
                 cert = sock.getpeercert()
 
-                # Check for weak protocols
                 if ssl.PROTOCOL_TLSv1 in context.supported_protocols():
                     return {
                         "vulnerable": True,
@@ -260,7 +245,6 @@ class WebAnalyzer:
                         "severity": "Medium"
                     }
 
-                # Check certificate expiration
                 import datetime
                 exp_date = datetime.datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
                 if exp_date - datetime.datetime.now() < datetime.timedelta(days=30):
