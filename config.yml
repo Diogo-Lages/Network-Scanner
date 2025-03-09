@@ -1,0 +1,70 @@
+# Scanner Configuration
+scanner:
+  timeout: 2
+  default_ports: [21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 993, 995, 3306, 3389, 5432, 8080, 8443]
+  max_concurrent_scans: 50
+  max_retries: 3
+  retry_delay: 1
+
+# Reporting Configuration
+reporting:
+  formats: ["html", "json"]
+  report_dir: "reports"
+  include_timestamps: true
+  include_reverse_dns: true
+  include_whois: true
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "scanner.log"
+  max_size: 10485760 # 10MB
+  backup_count: 5
+  console_output: true
+
+# Service Fingerprinting
+fingerprinting:
+  enable_extended_probes: true
+  banner_timeout: 3
+  service_db: "service_fingerprints.json"
+  tls_info: true
+  http_headers: true
+  aggressive_mode: false
+
+# Vulnerability Scanning
+vulnerability:
+  enable_vuln_check: true
+  nvd_api_delay: 1
+  max_vulns_per_service: 5
+  scan_known_vulns: true
+  cve_data_feed: "nvd"
+
+# DNS Configuration
+dns:
+  enable_ptr: true
+  enable_mx: true
+  enable_txt: true
+  timeout: 2
+  resolver_retries: 2
+
+# Additional Features
+features:
+  whois_lookup: true
+  geolocation: true
+  service_version_detection: true
+  os_detection: true
+  response_analysis: true
+
+# Rate Limiting
+rate_limiting:
+  requests_per_second: 10
+  burst_size: 20
+  adaptive_timing: true
+
+# Output Formatting
+output:
+  show_progress_bar: true
+  color_output: true
+  verbose_mode: false
+  quiet_mode: false
+  json_output: false

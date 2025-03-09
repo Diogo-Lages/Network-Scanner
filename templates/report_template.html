@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Scan Report - {{ timestamp }}</title>
+    <link rel="stylesheet" href="report_style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Network Scan Report</h1>
+            <p class="timestamp">Generated: {{ timestamp }}</p>
+        </header>
+
+        <section class="metadata">
+            <h2>Scan Metadata</h2>
+            <div class="metadata-content">
+                <div class="metadata-item">
+                    <strong>Start Time</strong>
+                    {{ metadata.start_time }}
+                </div>
+                <div class="metadata-item">
+                    <strong>End Time</strong>
+                    {{ metadata.end_time }}
+                </div>
+                <div class="metadata-item">
+                    <strong>Scanner Version</strong>
+                    {{ metadata.scanner_version }}
+                </div>
+                <div class="metadata-item">
+                    <strong>Target(s)</strong>
+                    {{ metadata.targets | join(', ') }}
+                </div>
+                {% if metadata.resolved_targets %}
+                <div class="metadata-item resolved">
+                    <strong>Resolved IP Addresses</strong>
+                    <ul>
+                    {% for ip in metadata.resolved_targets %}
+                        <li>{{ ip }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="risk-assessment">
+            <h2>Risk Assessment</h2>
+            {% if risk_assessment %}
+            <div class="risks-container">
+                {% if risk_assessment.high_risks %}
+                <div class="risk-category high-risk">
+                    <h3>High Risk Findings</h3>
+                    <ul>
+                        {% for risk in risk_assessment.high_risks %}
+                        <li class="severity-high">{{ risk }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if risk_assessment.medium_risks %}
+                <div class="risk-category medium-risk">
+                    <h3>Medium Risk Findings</h3>
+                    <ul>
+                        {% for risk in risk_assessment.medium_risks %}
+                        <li class="severity-medium">{{ risk }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if risk_assessment.low_risks %}
+                <div class="risk-category low-risk">
+                    <h3>Low Risk Findings</h3>
+                    <ul>
+                        {% for risk in risk_assessment.low_risks %}
+                        <li class="severity-low">{{ risk }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p>No risk assessment available.</p>
+            {% endif %}
+        </section>
+
+        <section class="scan-results">
+            <h2>Scan Results</h2>
+            {% for ip, results in scan_results.items() %}
+            <div class="host-result">
+                <h3>{{ ip }}</h3>
+                {% if results %}
+                <div class="ports-section">
+                    <h4>Open Ports and Services</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>Service</th>
+                                <th>Additional Information</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for port, service_info in results.items() %}
+                            <tr>
+                                <td>
+                                    <span class="status-indicator status-open"></span>
+                                    {{ port }}
+                                </td>
+                                {% set service_parts = service_info.split(' - ') %}
+                                <td>{{ service_parts[0] }}</td>
+                                <td>
+                                    {% if service_parts | length > 1 %}
+                                        <ul>
+                                        {% for detail in service_parts[1:] %}
+                                            {% if 'WAF Detected' in detail %}
+                                                <li class="waf-detected">{{ detail }}</li>
+                                            {% elif 'Frameworks' in detail or 'CMS' in detail %}
+                                                <li class="tech-stack">{{ detail }}</li>
+                                            {% elif 'Missing Security Headers' in detail %}
+                                                <li class="security-warning">{{ detail }}</li>
+                                            {% elif 'Potential Vulnerabilities' in detail %}
+                                                <li class="vulnerability">{{ detail }}</li>
+                                            {% else %}
+                                                <li>{{ detail }}</li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <em>No additional information</em>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="no-results"><em>No open ports found</em></p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+
+        <section class="configuration">
+            <h2>Scan Configuration</h2>
+            <div class="config-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Timeout</td>
+                            <td>{{ config.scanner.timeout }} seconds</td>
+                        </tr>
+                        <tr>
+                            <td>Default Ports</td>
+                            <td>{{ config.scanner.default_ports | join(', ') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Max Concurrent Scans</td>
+                            <td>{{ config.scanner.max_concurrent_scans }}</td>
+                        </tr>
+                        <tr>
+                            <td>Report Formats</td>
+                            <td>{{ config.reporting.formats | join(', ') | upper }}</td>
+                        </tr>
+                        {% if config.fingerprinting %}
+                        <tr>
+                            <td>Service Fingerprinting</td>
+                            <td>{{ "Enabled" if config.fingerprinting.enable_extended_probes else "Disabled" }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if config.vulnerability %}
+                        <tr>
+                            <td>Vulnerability Checking</td>
+                            <td>{{ "Enabled" if config.vulnerability.enable_vuln_check else "Disabled" }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
