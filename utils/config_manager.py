@@ -32,14 +32,12 @@ class ConfigManager:
             if section not in config:
                 raise ValueError(f"Missing required configuration section: {section}")
 
-        # Validate scanner section
         scanner_config = config['scanner']
         if not isinstance(scanner_config.get('default_ports', []), list):
             raise ValueError("scanner.default_ports must be a list")
         if not isinstance(scanner_config.get('timeout', 0), (int, float)):
             raise ValueError("scanner.timeout must be a number")
 
-        # Validate reporting section
         reporting_config = config['reporting']
         if not isinstance(reporting_config.get('formats', []), list):
             raise ValueError("reporting.formats must be a list")
