@@ -25,20 +25,18 @@ class NetworkScanner:
     GEOLITE_DB = "GeoLite2-City.mmdb"
 
     def __init__(self):
-        init(autoreset=True)  # Initialize colorama
+        init(autoreset=True)  
         self.config_manager = ConfigManager()
         self.logger = ScannerLogger()
         self.scanner = AsyncScanner(self.config_manager.get_config())
         self.reporter = ScanReporter()
-        self._seen_dns = set()  # Track resolved DNS entries
+        self._seen_dns = set()  
         self.console = Console()
 
-        # Check optional features
         self.geolocation_enabled = os.path.exists(self.GEOLITE_DB)
         if not self.geolocation_enabled:
             self.logger.warning(f"GeoLite2 database not found at {self.GEOLITE_DB}. Geolocation features will be disabled.")
 
-        # Initialize optional features based on config
         self.config = self.config_manager.get_config()
         print(Style.BRIGHT + Fore.CYAN + "\nFeature Status:")
         features = [
@@ -75,8 +73,7 @@ class NetworkScanner:
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")
-
-        # Add statistics rows
+        
         table.add_row("Total Ports Scanned", str(stats["total_ports_scanned"]))
         table.add_row("Open Ports Found", str(stats["open_ports_found"]))
         table.add_row("Scan Duration", f"{stats['scan_duration']:.2f} seconds")
@@ -112,7 +109,6 @@ class NetworkScanner:
         """Get additional domain information"""
         try:
             info = {}
-            # WHOIS information
             try:
                 w = whois.whois(domain)
                 info['registrar'] = w.registrar
@@ -121,24 +117,20 @@ class NetworkScanner:
             except Exception as e:
                 self.logger.warning(f"Could not get WHOIS info: {e}")
 
-            # DNS information
             try:
                 records = {}
-                # A records
                 try:
                     answers = dns.resolver.resolve(domain, 'A')
                     records['A'] = [str(rdata) for rdata in answers]
                 except Exception:
                     pass
 
-                # MX records
                 try:
                     answers = dns.resolver.resolve(domain, 'MX')  # Fixed: Using domain instead of database
                     records['MX'] = [str(rdata) for rdata in answers]
                 except Exception:
                     pass
 
-                # TXT records
                 try:
                     answers = dns.resolver.resolve(domain, 'TXT')
                     records['TXT'] = [str(rdata) for rdata in answers]
@@ -155,7 +147,6 @@ class NetworkScanner:
             return {}
 
     async def traceroute(self, target: str) -> List[str]:
-        """Perform traceroute to target"""
         try:
             if platform.system().lower() == "windows":
                 command = ["tracert", "-h", "30", target]
@@ -182,7 +173,6 @@ class NetworkScanner:
         try:
             print(Style.BRIGHT + Fore.CYAN + f"\n[*] Resolving {target}...")
 
-            # Try to resolve IPv4
             try:
                 ipv4_addrs = await asyncio.get_event_loop().getaddrinfo(
                     target, None, family=socket.AF_INET
@@ -192,7 +182,6 @@ class NetworkScanner:
             except socket.gaierror:
                 print(Fore.YELLOW + f"[-] No IPv4 address found for {target}")
 
-            # Try to resolve IPv6
             try:
                 ipv6_addrs = await asyncio.get_event_loop().getaddrinfo(
                     target, None, family=socket.AF_INET6
@@ -206,24 +195,21 @@ class NetworkScanner:
                 print(Style.BRIGHT + Fore.RED + f"[!] Could not resolve {target} to any IP address")
                 return []
 
-            # Perform reverse DNS lookup and get geolocation for each unique IP
             for addr in addresses:
                 if addr not in self._seen_dns:
                     try:
-                        # Reverse DNS
                         hostname = socket.gethostbyaddr(addr)[0]
                         print(Fore.CYAN + f"[+] Reverse DNS: {addr} -> {hostname}")
                         self._seen_dns.add(addr)
 
-                        # Geolocation (only for IPv4)
-                        if ':' not in addr:  # Skip IPv6 addresses
+                        if ':' not in addr:  
                             geo_info = await self.get_geolocation(addr)
                             if geo_info:
                                 print(Fore.CYAN + f"[+] Location: {geo_info.get('city', 'Unknown')}, {geo_info.get('country', 'Unknown')}")
                     except socket.herror:
                         print(Fore.YELLOW + f"[-] Could not perform reverse DNS lookup for {addr}")
 
-            return list(set(addresses))  # Remove duplicates
+            return list(set(addresses))
 
         except Exception as e:
             self.logger.error(f"Error resolving target {target}: {e}")
@@ -245,12 +231,11 @@ class NetworkScanner:
                 }
             }
 
-            # Update scanner config if custom ports provided
             if custom_ports:
                 self.scanner.config["scanner"]["default_ports"] = custom_ports
                 print(Style.BRIGHT + Fore.CYAN + f"[*] Using custom ports: {', '.join(map(str, custom_ports))}")
 
-            # Progress display setup
+
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -260,13 +245,12 @@ class NetworkScanner:
             ) as progress:
                 resolve_task = progress.add_task("[cyan]Resolving targets...", total=len(targets))
 
-                # Resolve all targets first
+
                 resolved_targets = []
                 for target in targets:
                     try:
                         addresses = await self.resolve_target(target)
                         if addresses:
-                            # Filter addresses based on IP version preference
                             if ipv4_only:
                                 addresses = [addr for addr in addresses if ':' not in addr]
                             elif ipv6_only:
@@ -284,34 +268,27 @@ class NetworkScanner:
 
                 print(Style.BRIGHT + Fore.CYAN + f"\n[*] Starting port scan for {len(resolved_targets)} hosts...")
 
-                # Summary table for results
                 results_table = Table(show_header=True, header_style="bold magenta")
                 results_table.add_column("Host", style="cyan")
                 results_table.add_column("Open Ports", style="green")
                 results_table.add_column("Services", style="yellow")
 
-                # Add scanning progress
                 scan_task = progress.add_task("[cyan]Scanning ports...", total=len(resolved_targets))
                 scan_tasks = [self.scanner.scan_host(target) for target in resolved_targets]
 
-                # Run scans
                 await asyncio.gather(*scan_tasks)
                 progress.update(scan_task, completed=len(resolved_targets))
 
-            # Get results and display summary
             scan_results = self.scanner.get_results()
             scan_stats = self.scanner.get_stats()
 
-            # Generate reports
             scan_metadata["end_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             scan_metadata["resolved_targets"] = resolved_targets
             scan_metadata["statistics"] = scan_stats
             report_files = self.reporter.generate_reports(scan_results, scan_metadata)
 
-            # Display results summary
             print(Style.BRIGHT + Fore.GREEN + "\n[+] Scan completed!")
 
-            # Show statistics
             self.show_scan_statistics(scan_stats)
 
             for ip, ports in scan_results.items():
@@ -329,7 +306,6 @@ class NetworkScanner:
             self.console.print("\nScan Results Summary:")
             self.console.print(results_table)
 
-            # Show report files
             print(Style.BRIGHT + Fore.CYAN + "\nReport files generated:")
             for format, filepath in report_files.items():
                 print(Fore.GREEN + f"[+] {format.upper()}: {filepath}")
@@ -340,14 +316,12 @@ class NetworkScanner:
             sys.exit(1)
 
     def get_target_input(self) -> List[str]:
-        """Get target input from user"""
         print(Style.BRIGHT + Fore.YELLOW + "\nEnter target hosts/IPs (comma-separated):")
         print(Style.RESET_ALL, end='')
         targets = input(Fore.CYAN + "> " + Style.RESET_ALL).strip()
         return [t.strip() for t in targets.split(",") if t.strip()]
 
     def get_port_input(self) -> Optional[List[int]]:
-        """Get optional custom port range"""
         print(Style.BRIGHT + Fore.YELLOW + "\nUse custom ports? (y/N):")
         print(Style.RESET_ALL, end='')
         choice = input(Fore.CYAN + "> " + Style.RESET_ALL).strip().lower()
@@ -364,11 +338,9 @@ class NetworkScanner:
         return None
 
     def clear_screen(self):
-        """Clear the terminal screen in a cross-platform way"""
         os.system('cls' if os.name == 'nt' else 'clear')
 
     def show_menu(self):
-        """Display the main menu and handle user input"""
         ipv4_only = False
         ipv6_only = False
 
@@ -376,7 +348,6 @@ class NetworkScanner:
             self.clear_screen()
             self.display_banner()
 
-            # Show current scan mode
             mode_color = Fore.GREEN if ipv4_only or ipv6_only else Fore.CYAN
             if ipv4_only:
                 mode = f"{mode_color}Current Mode: IPv4 Only"
