@@ -58,11 +58,10 @@ class AsyncScanner:
                 return False
 
     async def _delay_if_needed(self, ip: str):
-        """Implement rate limiting per host"""
         now = time.time()
         if ip in self._last_scan_time:
             elapsed = now - self._last_scan_time[ip]
-            if elapsed < 0.1:  # Minimum 100ms between scans to same host
+            if elapsed < 0.1: 
                 await asyncio.sleep(0.1 - elapsed)
         self._last_scan_time[ip] = now
 
@@ -86,7 +85,6 @@ class AsyncScanner:
 
                 for retry in range(max_retries):
                     try:
-                        # Try both IPv4 and IPv6
                         for family in (socket.AF_INET, socket.AF_INET6):
                             try:
                                 reader, writer = await asyncio.wait_for(
@@ -136,7 +134,6 @@ class AsyncScanner:
             service_info.append(service_name)
 
             if self.config["fingerprinting"]["enable_extended_probes"]:
-                # Web service analysis for HTTP/HTTPS ports
                 if port in [80, 443, 8080, 8443]:
                     protocol = "https" if port in [443, 8443] else "http"
                     url = f"{protocol}://{ip}:{port}"
@@ -146,23 +143,19 @@ class AsyncScanner:
                         self.scan_stats["web_services_analyzed"] += 1
 
                         if web_analysis:
-                            # Add WAF information
                             if web_analysis["waf"]["detected"]:
                                 service_info.append(f"WAF Detected: {', '.join(web_analysis['waf']['identified_wafs'])}")
 
-                            # Add technology stack
                             tech = web_analysis["technologies"]
                             if tech.get("frameworks"):
                                 service_info.append(f"Frameworks: {', '.join(tech['frameworks'])}")
                             if tech.get("cms"):
                                 service_info.append(f"CMS: {', '.join(tech['cms'])}")
 
-                            # Add security headers status
                             missing_headers = web_analysis["security_headers"]["missing"]
                             if missing_headers:
                                 service_info.append(f"Missing Security Headers: {', '.join(missing_headers)}")
 
-                            # Add vulnerabilities
                             vulns = web_analysis["potential_vulnerabilities"]
                             if vulns:
                                 self.scan_stats["vulnerabilities_found"] += len(vulns)
@@ -172,13 +165,11 @@ class AsyncScanner:
                     except Exception as e:
                         self.logger.debug(f"Web analysis error for {url}: {e}")
 
-                # SSL/TLS information
                 elif port in [443, 8443]:
                     ssl_info = await self.get_ssl_info(ip, port)
                     if ssl_info:
                         service_info.append(ssl_info)
 
-                # Banner information
                 banner = await self.grab_generic_banner(ip, port)
                 if banner:
                     service_info.append(banner)
@@ -232,12 +223,10 @@ class AsyncScanner:
                 async with session.get(url, ssl=ssl_context) as response:
                     info = []
 
-                    # Server information
                     server = response.headers.get('Server', '')
                     if server:
                         info.append(f"Server: {server}")
 
-                    # Additional headers of interest
                     interesting_headers = ['X-Powered-By', 'X-AspNet-Version', 'X-Runtime']
                     for header in interesting_headers:
                         if header in response.headers:
@@ -255,15 +244,14 @@ class AsyncScanner:
         try:
             reader, writer = await asyncio.open_connection(ip, port)
             try:
-                # Send different probes based on the port
-                if port == 21:  # FTP
-                    pass  # FTP servers usually send banner automatically
-                elif port == 22:  # SSH
-                    pass  # SSH servers usually send banner automatically
-                elif port == 25:  # SMTP
+                if port == 21:  
+                    pass  
+                elif port == 22:  
+                    pass  
+                elif port == 25:  
                     writer.write(b"EHLO scanner.local\r\n")
-                elif port == 110:  # POP3
-                    pass  # POP3 servers usually send banner automatically
+                elif port == 110:  
+                    pass  
                 else:
                     writer.write(b"\r\n")
                 await writer.drain()
@@ -271,7 +259,6 @@ class AsyncScanner:
                 banner = await asyncio.wait_for(reader.read(1024), timeout=2)
                 decoded = banner.decode('utf-8', errors='ignore').strip()
                 if decoded:
-                    # Clean up the banner - remove excessive whitespace and newlines
                     return ' '.join(decoded.split())
                 return None
             finally:
@@ -298,18 +285,16 @@ class AsyncScanner:
 
             results = await asyncio.gather(*scan_tasks)
 
-            # Process results and de-duplicate
             open_ports = {}
             for port, status in results:
                 if status == "open":
                     service = await self.service_detection(ip, port)
-                    if service:  # Only add if service detection was successful
+                    if service:  
                         open_ports[port] = service
 
-            if open_ports:  # Only store results if we found open ports
+            if open_ports:  
                 self.scan_results[ip] = open_ports
 
-            # Update scan duration
             self.scan_stats["scan_duration"] = time.time() - start_time
             return open_ports
 
